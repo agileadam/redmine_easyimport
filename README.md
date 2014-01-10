@@ -95,12 +95,11 @@ Note 2: each attribute must have a space before it, and no spaces before or afte
     --- Closet a=6
 
 ## Future plans
-- Fix TODO items in code
+- Address TODO items in code
 - Attribute lookups to verify validity
 - Rework how attributes work
   - current setup only works with integers
   - it'd be nice to set the issue ""description", for example
-- Support multiple levels of subtasks
 
 ## Disclaimer
 Please try out the importer on a test project until you are comfortable with how it works.
