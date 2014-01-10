@@ -13,6 +13,8 @@ EasyImport for Redmine makes it easy to import issues into Redmine.
 - Prevents duplicate issues at the project-level
 - Prevents duplicate sub-issues
 - Set assignee, tracker, status, category, priority, and done-ratio independently on each item
+- Allows nesting of issues as many levels deep as you need (assuming Redmine doesn't have a limitation)
+- You can add sub-issues to issues that are already in Redmine before the import (see ^=n in *Attributes and values*)
 
 ## Usage
 
@@ -44,12 +46,14 @@ This script is called EasyImport for a reason! It's meant to be a very simple wa
 
 ### Character Table
 
-| Begin line with                             | type        | handling                      |
-| --------------------------------------------| ----------- | ----------------------------  |
-| `#`                                         | Comment     | ignore line                   |
-| First character is anything but `#` and `-` | Project     | title lookup only  (required) |
-| `-`                                         | Issue       | lookup, create if not found   |
-| `--`                                        | Sub-issue   | create only                   |
+| Begin line with                             | type          | handling                     |
+| --------------------------------------------| -----------   | ---------------------------- |
+| `#`                                         | Comment       | ignore line                  |
+| First character is anything but `#` and `-` | Project       | title lookup only (required) |
+| `-`                                         | Issue         | create only                  |
+| `--`                                        | Sub-issue     | create only                  |
+| `---`                                       | Sub-sub-issue | create only                  |
+| `etc...`                                    | etc...        | create only                  |
 
 ### Attributes and values
 
@@ -59,6 +63,8 @@ This script is called EasyImport for a reason! It's meant to be a very simple wa
 - Set category ID with: c=*n*
 - Set priority ID with: p=*n*
 - Set done-ratio with: d=*n* (e.g., use "55" for 55% done)
+- Set parent issue ID with: ^=*n*
+  - This only works for top-level issues (one hyphen) see Paint example below
 
 Note 1: all of the "ID" attributes require integer values. e.g., a=5
 
@@ -76,10 +82,17 @@ Note 2: each attribute must have a space before it, and no spaces before or afte
     --Clean basement
     --Clean shed p=2
     
+    # This first issue below will be a child of issue 234.
+    # The two bedrooms will be grandchildren of issue 234.
+    # "Ceiling" hierarchy: Paint > Upstairs > Kids bedroom > Ceiling
+
     Paint
-    - Paint the upstairs bedrooms
+    - Upstairs ^=234
     -- Master bedroom t=2
     -- Kids bedroom p=4
+    --- Ceiling a=6
+    --- Walls a=6 t=1
+    --- Closet a=6
 
 ## Future plans
 - Fix TODO items in code

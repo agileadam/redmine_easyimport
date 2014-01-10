@@ -6,6 +6,7 @@ import os.path
 import re
 import requests
 import sys
+from itertools import takewhile
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -122,10 +123,16 @@ def findProjectByName(search_name, projects):
             return id
     return 0
 
-def findIssueByName(search_name, tasks):
+# TODO unused method?
+def findIssueByName(search_name, project_issues):
     for id, issue in project_issues.items():
         if search_name.lower() == issue.lower():
             return id
+    return 0
+
+def findIssueById(check_id, project_issues):
+    if check_id in project_issues:
+        return id
     return 0
 
 def projectIssues(project_id):
@@ -160,6 +167,8 @@ projects = allProjects()
 # We need these outside of the loop so we can reduce API queries
 # because we should only need to lookup a specific project's milestones/tasks once
 project_id = 0
+last_depth = 0
+last_issue_id = 0
 error_count = 0
 warning_count = 0
 
@@ -205,11 +214,15 @@ for line in lines:
 
     # Process any attributes for this line
     attributes = {}
-    matches = re.findall(' [atscpd]=[\d-]*', lineclean)
+    matches = re.findall(' [atscpd^]=[\d-]*', lineclean)
     if matches:
         for match in matches:
             # Separate the attribute key and its value
             key, val = match.split('=')
+
+            if key == ' ^':
+                # TODO check if this is a valid parent_issue_id
+                attributes['parent_issue_id'] = int(val)
 
             if key == ' a':
                 # TODO check if this is a valid assignee id
@@ -251,31 +264,45 @@ for line in lines:
         continue
 
     # Issue
-    if re.match('^-[\w\d ]', line):
+    if line.startswith('-'):
+        this_depth = sum(1 for _ in takewhile(lambda z: z == '-', line))
+
+        if 'parent_issue_id' in attributes:
+            if this_depth != 1:
+                # This is a sub-issue in the structure; don't allow ^=n
+                LOG.error('Line %3s: Parent (^=n) only allowed on single-hyphen lines; set parent based on import structure', i)
+                del attributes['parent_issue_id']
+
+        if last_issue_id and this_depth > last_depth and 'parent_issue_id' not in attributes:
+            # We're adding a parent based on depth
+            attributes['parent_issue_id'] = last_issue_id
+
+        issue_id = 0
         issue_name = lineclean
-        # Get all issues within the project
-        project_issues = projectIssues(project_id)
 
-        # See if a matching issue exists (strip off beginning - and space chars)
-        issue_id = findIssueByName(issue_name, project_issues)
+        if 'parent_issue_id' in attributes:
+            # Get all issues within the project
+            project_issues = projectIssues(project_id)
 
-        if not issue_id:
-            # Create a new task and store its issue id for subissues
-            created_issue = createIssue(project_id, issue_name, attributes)
-            issue_id = created_issue['issue']['id']
-            if created_issue:
-                LOG.info('Line %3s: Task doesn\'t exist; created new task #%d "%s"', i, issue_id, issue_name)
-            else:
-                LOG.error('Line %3s: Task doesn\'t exist and could not create task "%s"', i, lineclean)
-                error_count += 1
+            # See if a matching issue exists
+            parent_issue_id = findIssueById(attributes['parent_issue_id'], project_issues)
+
+            if not parent_issue_id:
+                # No matching issue, so remove this attribute
+                del attributes['parent_issue_id']
+                LOG.error('Line %3s: Invalid parent issue ID; not setting parent issue ID for this issue', i, lineclean)
+
+        # Create a new task and store its issue id for subissues
+        created_issue = createIssue(project_id, issue_name, attributes)
+        issue_id = created_issue['issue']['id']
+        if created_issue:
+            LOG.info('Line %3s: Created new issue #%d "%s"', i, issue_id, issue_name)
         else:
-            LOG.info('Line %3s: Loaded issue #%d "%s"', i, issue_id, lineclean)
-        continue
+            LOG.error('Line %3s: Could not create issue "%s"', i, lineclean)
+            error_count += 1
 
-    # Sub-issue
-    if re.match('^--[\w\d ]', line):
-        # TODO add sub-issue functionality
-        LOG.warning('Line %3s: Sorry but we cannot handle sub-issues yet; did not add "%s"', i, lineclean)
+        last_depth = this_depth
+        last_issue_id = issue_id
         continue
 
 LOG.info('Finished processing import file')
@@ -290,5 +317,9 @@ sys.exit()
 # TODO document tracker_id values: 1=bug, 2=feature, 3=support
 # TODO document status_id values: 1=new, 2=in progress, 3=resolved, 4=feedback, 5=closed
 # TODO document category_id values: 1=documentation, 2=server administration
+
+# TODO implement ^=123 to set parent task
 # TODO remove duplicate issue checking functionality and require IDs if adding
 #      subitems to an existing issue
+# TODO allow unlimited nesting of sub-issues... push and pop to get parents
+#      when number of hyphens changes
