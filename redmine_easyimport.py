@@ -69,8 +69,7 @@ def writeBlankConfig():
             configfile.write("api_url = \n")
             configfile.write("api_key = ")
     except IOError:
-        # TODO provide instruction on config file
-        printMessage.err('Could not create template config file.')
+        printMessage.err('Could not create template config file. Please view the README file.')
         sys.exit()
 
 try:
@@ -93,7 +92,7 @@ def makePostRequest(path, data_payload, parameters = {}):
     if r.status_code == requests.codes.ok or r.status_code == 201:
         return r.json()
     else:
-        r.raise_for_status() # TODO remove this after testing
+        r.raise_for_status()
         return False
 
 def makeGetRequest(path, parameters = {}):
@@ -105,7 +104,7 @@ def makeGetRequest(path, parameters = {}):
     if r.status_code == requests.codes.ok:
         return r.json()
     else:
-        r.raise_for_status() # TODO remove this after testing
+        r.raise_for_status()
         return False
 
 def allProjects():
@@ -120,13 +119,6 @@ def allProjects():
 def findProjectByName(search_name, projects):
     for id, name in projects.items():
         if search_name.lower() == name.lower():
-            return id
-    return 0
-
-# TODO unused method?
-def findIssueByName(search_name, project_issues):
-    for id, issue in project_issues.items():
-        if search_name.lower() == issue.lower():
             return id
     return 0
 
@@ -221,7 +213,7 @@ for line in lines:
             key, val = match.split('=')
 
             if key == ' ^':
-                # TODO check if this is a valid parent_issue_id
+                # This value will be validated later
                 attributes['parent_issue_id'] = int(val)
 
             if key == ' a':
@@ -257,7 +249,6 @@ for line in lines:
             lineclean = lineclean.replace(match, '')
 
     # If we don't have a valid project, we can't add any subitems
-    # TODO This may be redundant (see above)
     if not project_id:
         LOG.error('Line %3s: Invalid project name, could not add "%s"', i, lineclean)
         error_count += 1
@@ -312,14 +303,3 @@ if error_count > 0 or warning_count > 0:
     LOG.info('%d warnings detected. Please view the log.', warning_count)
 
 sys.exit()
-
-# TODO document priority_id values: 1=low, 2=normal, 3=high, 4=urgent, 5=immediate
-# TODO document tracker_id values: 1=bug, 2=feature, 3=support
-# TODO document status_id values: 1=new, 2=in progress, 3=resolved, 4=feedback, 5=closed
-# TODO document category_id values: 1=documentation, 2=server administration
-
-# TODO implement ^=123 to set parent task
-# TODO remove duplicate issue checking functionality and require IDs if adding
-#      subitems to an existing issue
-# TODO allow unlimited nesting of sub-issues... push and pop to get parents
-#      when number of hyphens changes
