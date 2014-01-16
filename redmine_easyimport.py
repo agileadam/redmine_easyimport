@@ -159,7 +159,8 @@ projects = allProjects()
 # We need these outside of the loop so we can reduce API queries
 # because we should only need to lookup a specific project's milestones/tasks once
 project_id = 0
-last_depth = 0
+hierarchy = []
+last_depth = 1
 last_issue_id = 0
 error_count = 0
 warning_count = 0
@@ -258,30 +259,35 @@ for line in lines:
     if line.startswith('-'):
         this_depth = sum(1 for _ in takewhile(lambda z: z == '-', line))
 
+        if this_depth > last_depth:
+            hierarchy.append(last_issue_id)
+
+        if this_depth < last_depth:
+            del hierarchy[-1]
+
         if 'parent_issue_id' in attributes:
             if this_depth != 1:
                 # This is a sub-issue in the structure; don't allow ^=n
                 LOG.error('Line %3s: Parent (^=n) only allowed on single-hyphen lines; set parent based on import structure', i)
                 del attributes['parent_issue_id']
+            else:
+                # Get all issues within the project
+                project_issues = projectIssues(project_id)
 
-        if last_issue_id and this_depth > last_depth and 'parent_issue_id' not in attributes:
-            # We're adding a parent based on depth
-            attributes['parent_issue_id'] = last_issue_id
+                # See if a matching issue exists
+                parent_issue_id = findIssueById(attributes['parent_issue_id'], project_issues)
+
+                if not parent_issue_id:
+                    # No matching issue, so remove this attribute
+                    del attributes['parent_issue_id']
+                    LOG.error('Line %3s: Invalid parent issue ID; not setting parent issue ID for this issue', i, lineclean)
+        else:
+            if len(hierarchy) > 0:
+                # We're adding a parent based on depth
+                attributes['parent_issue_id'] = hierarchy[-1]
 
         issue_id = 0
         issue_name = lineclean
-
-        if 'parent_issue_id' in attributes:
-            # Get all issues within the project
-            project_issues = projectIssues(project_id)
-
-            # See if a matching issue exists
-            parent_issue_id = findIssueById(attributes['parent_issue_id'], project_issues)
-
-            if not parent_issue_id:
-                # No matching issue, so remove this attribute
-                del attributes['parent_issue_id']
-                LOG.error('Line %3s: Invalid parent issue ID; not setting parent issue ID for this issue', i, lineclean)
 
         # Create a new task and store its issue id for subissues
         created_issue = createIssue(project_id, issue_name, attributes)
