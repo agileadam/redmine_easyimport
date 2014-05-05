@@ -45,7 +45,7 @@ def processConfig(configfile_path):
 
     potential_api_url = parser.get('api_settings', 'api_url')
     if potential_api_url == '':
-        printMessage.err('Configuration file needs valid api_url')
+        LOG.error('Configuration file needs valid api_url')
         error_count += 1
     else:
         if not potential_api_url.endswith('/'):
@@ -54,7 +54,7 @@ def processConfig(configfile_path):
 
     potential_api_key = parser.get('api_settings', 'api_key')
     if potential_api_key == "":
-        printMessage.err('Configuration file needs valid api_key')
+        LOG.error('Configuration file needs valid api_key')
         error_count += 1
     else:
         api_key = potential_api_key
@@ -69,7 +69,7 @@ def writeBlankConfig():
             configfile.write("api_url = \n")
             configfile.write("api_key = ")
     except IOError:
-        printMessage.err('Could not create template config file. Please view the README file.')
+        LOG.error('Could not create template config file. Please view the README file.')
         sys.exit()
 
 try:
@@ -112,7 +112,7 @@ def allProjects():
     # TODO could have a problem with the "limit" and "offset" if > 25 projects
     all = {}
     for project in result['projects']:
-        # TODO consider accepting name OR identifier
+        # TODO should use project slug instead of name
         all[project['id']] = project['name']
     return all
 

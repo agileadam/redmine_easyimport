@@ -96,6 +96,7 @@ Note 2: each attribute must have a space before it, and no spaces before or afte
 
 ## Future plans
 - Address TODO items in code
+- Project lookup should be based on slug incase two projects are named the same
 - Attribute lookups to verify validity
 - Rework how attributes work
   - current setup only works with integers
