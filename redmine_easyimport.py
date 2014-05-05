@@ -10,7 +10,7 @@ from itertools import takewhile
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s")
+formatter = logging.Formatter("%(asctime)s [%(levelname)-8s] %(message)s", "%Y-%m-%d %H:%M:%S")
 
 # File logging
 fh = logging.FileHandler("result.log")
